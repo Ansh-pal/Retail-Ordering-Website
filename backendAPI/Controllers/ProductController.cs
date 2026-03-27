@@ -22,7 +22,48 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetAllProducts()
     {
         var products = await _context.Products
-            .Include(p => p.Category)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Price,
+                p.CategoryId,
+                CategoryName = p.Category != null ? p.Category.Name : string.Empty,
+                p.Quantity,
+                p.IsAvailable
+            })
+            .ToListAsync();
+
+        return Ok(products);
+    }
+
+    [HttpGet("category/{categoryId:int}")]
+    [Authorize(Roles = "User,Manager")]
+    public async Task<IActionResult> GetProductsByCategory(int categoryId)
+    {
+        if (categoryId <= 0)
+        {
+            return BadRequest("Invalid category id.");
+        }
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == categoryId);
+        if (!categoryExists)
+        {
+            return NotFound("Category not found.");
+        }
+
+        var products = await _context.Products
+            .Where(p => p.CategoryId == categoryId)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Price,
+                p.CategoryId,
+                CategoryName = p.Category != null ? p.Category.Name : string.Empty,
+                p.Quantity,
+                p.IsAvailable
+            })
             .ToListAsync();
 
         return Ok(products);
