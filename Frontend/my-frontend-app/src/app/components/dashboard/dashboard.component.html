@@ -1,0 +1,51 @@
+<div class="dashboard-container">
+  <!-- Header/Navbar -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <h1 class="logo">Retail Store</h1>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <span class="user-name">{{ userName }}</span>
+        <span class="user-role">({{ userRole }})</span>
+      </div>
+      <button class="btn btn-logout" (click)="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="dashboard-content">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <nav class="sidebar-menu">
+        <h3 class="menu-title">Menu</h3>
+        <ul class="menu-list">
+          <li>
+            <button class="menu-item" [class.active]="showProductList" (click)="showProducts()">
+              <span class="menu-icon">🛍️</span>
+              <span class="menu-text">Products</span>
+            </button>
+          </li>
+          <li>
+            <button class="menu-item" [class.active]="!showProductList" (click)="showCart()">
+              <span class="menu-icon">🛒</span>
+              <span class="menu-text">Shopping Cart</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Product List Component -->
+      <div *ngIf="showProductList" class="content-section">
+        <app-product-list></app-product-list>
+      </div>
+
+      <!-- Cart Component -->
+      <div *ngIf="!showProductList" class="content-section">
+        <app-cart></app-cart>
+      </div>
+    </main>
+  </div>
+</div>

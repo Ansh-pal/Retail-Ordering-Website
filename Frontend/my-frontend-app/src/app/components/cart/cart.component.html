@@ -1,0 +1,91 @@
+<div class="cart-container">
+  <div class="header">
+    <h2>Shopping Cart</h2>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="success-message">
+    {{ successMessage }}
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-message">
+    <p>Loading cart...</p>
+  </div>
+
+  <!-- Cart Items Table -->
+  <div *ngIf="!isLoading && cartItems.length > 0" class="table-responsive">
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Subtotal</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of cartItems" [class.no-product]="!item.product">
+          <td>{{ item.product?.name || 'Product ' + item.productId }}</td>
+          <td>${{ item.product?.price | number: '1.2-2' }}</td>
+          <td class="quantity-cell">
+            <div class="quantity-control">
+              <button
+                class="btn btn-qty"
+                (click)="decrementQuantity(item)"
+                [disabled]="item.quantity <= 1"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                class="quantity-input"
+                [value]="item.quantity"
+                (change)="updateQuantity(item.productId, +$event.target.value)"
+                min="1"
+              />
+              <button class="btn btn-qty" (click)="incrementQuantity(item)">+</button>
+            </div>
+          </td>
+          <td>${{ getSubtotal(item) | number: '1.2-2' }}</td>
+          <td class="actions">
+            <button class="btn btn-remove" (click)="removeItem(item.productId)">Remove</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Cart Summary -->
+    <div class="cart-summary">
+      <div class="summary-row">
+        <span class="summary-label">Subtotal:</span>
+        <span class="summary-value">${{ calculateTotal() | number: '1.2-2' }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Tax (10%):</span>
+        <span class="summary-value">${{ calculateTotal() * 0.1 | number: '1.2-2' }}</span>
+      </div>
+      <div class="summary-row total">
+        <span class="summary-label">Total:</span>
+        <span class="summary-value">${{ calculateTotal() * 1.1 | number: '1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- Checkout Button -->
+    <div class="checkout-section">
+      <button class="btn btn-checkout" (click)="checkout()">Proceed to Checkout</button>
+    </div>
+  </div>
+
+  <!-- Empty Cart Message -->
+  <div *ngIf="!isLoading && cartItems.length === 0" class="empty-cart-message">
+    <p>Your cart is empty</p>
+    <p class="cart-hint">Add items from the product list to get started</p>
+  </div>
+</div>
