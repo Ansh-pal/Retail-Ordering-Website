@@ -86,6 +86,7 @@
     <p>Loading products...</p>
   </div>
 
+  <ng-container *ngIf="products$ | async as products">
   <!-- Products Table -->
   <div *ngIf="!isLoading && products.length > 0" class="table-responsive">
     <table class="products-table">
@@ -115,7 +116,7 @@
             <button
               *ngIf="!isManager()"
               class="btn btn-add-cart"
-              (click)="addToCart(product.id)"
+              (click)="addToCart(product)"
               [disabled]="!product['isAvailable']"
             >
               Add to Cart
@@ -133,4 +134,5 @@
   <div *ngIf="!isLoading && products.length === 0" class="no-products-message">
     <p>No products found</p>
   </div>
+  </ng-container>
 </div>
