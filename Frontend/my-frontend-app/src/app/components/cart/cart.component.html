@@ -18,6 +18,7 @@
     <p>Loading cart...</p>
   </div>
 
+  <ng-container *ngIf="cartItems$ | async as cartItems">
   <!-- Cart Items Table -->
   <div *ngIf="!isLoading && cartItems.length > 0" class="table-responsive">
     <table class="cart-table">
@@ -65,15 +66,15 @@
     <div class="cart-summary">
       <div class="summary-row">
         <span class="summary-label">Subtotal:</span>
-        <span class="summary-value">${{ calculateTotal() | number: '1.2-2' }}</span>
+        <span class="summary-value">${{ calculateTotal(cartItems) | number: '1.2-2' }}</span>
       </div>
       <div class="summary-row">
         <span class="summary-label">Tax (10%):</span>
-        <span class="summary-value">${{ calculateTotal() * 0.1 | number: '1.2-2' }}</span>
+        <span class="summary-value">${{ calculateTotal(cartItems) * 0.1 | number: '1.2-2' }}</span>
       </div>
       <div class="summary-row total">
         <span class="summary-label">Total:</span>
-        <span class="summary-value">${{ calculateTotal() * 1.1 | number: '1.2-2' }}</span>
+        <span class="summary-value">${{ calculateTotal(cartItems) * 1.1 | number: '1.2-2' }}</span>
       </div>
     </div>
 
@@ -125,4 +126,5 @@
     <p>Your cart is empty</p>
     <p class="cart-hint">Add items from the product list to get started</p>
   </div>
+  </ng-container>
 </div>

@@ -1,14 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Product } from '../../services/product.service';
 import { CartService, CartItem as ServiceCartItem } from '../../services/cart.service';
 import { OrderService, OrderSummary, OrderItem } from '../../services/order.service';
-
-export interface CartItem {
-  productId: number;
-  quantity: number;
-  product?: Product;
-}
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-cart',
@@ -18,7 +12,7 @@ export interface CartItem {
   styleUrls: ['./cart.component.css']
 })
 export class CartComponent implements OnInit {
-  cartItems: CartItem[] = [];
+  cartItems$!: Observable<ServiceCartItem[]>;
   isLoading: boolean = true;
   successMessage: string = '';
   errorMessage: string = '';
@@ -34,6 +28,7 @@ export class CartComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.cartItems$ = this.cartService.cartItems$;
     this.userRole = localStorage.getItem('userRole') || '';
     if (this.userRole !== 'User') {
       this.isLoading = false;
@@ -50,13 +45,8 @@ export class CartComponent implements OnInit {
    */
   loadCart(): void {
     this.isLoading = true;
-    this.cartService.getCart().subscribe({
-      next: (items: ServiceCartItem[]) => {
-        this.cartItems = items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          product: item.product as Product | undefined
-        }));
+    this.cartService.refreshCart().subscribe({
+      next: () => {
         this.isLoading = false;
       },
       error: (error) => {
@@ -79,10 +69,6 @@ export class CartComponent implements OnInit {
     this.clearMessages();
     this.cartService.updateCartItem(productId, newQuantity).subscribe({
       next: () => {
-        const cartItem = this.cartItems.find(item => item.productId === productId);
-        if (cartItem) {
-          cartItem.quantity = newQuantity;
-        }
         this.successMessage = 'Quantity updated successfully!';
         setTimeout(() => this.clearMessages(), 2000);
       },
@@ -101,7 +87,6 @@ export class CartComponent implements OnInit {
     this.clearMessages();
     this.cartService.removeFromCart(productId).subscribe({
       next: () => {
-        this.cartItems = this.cartItems.filter(item => item.productId !== productId);
         this.successMessage = 'Item removed from cart!';
         setTimeout(() => this.clearMessages(), 2000);
       },
@@ -114,29 +99,10 @@ export class CartComponent implements OnInit {
   }
 
   /**
-   * Calculate subtotal for a single item
-   */
-  getSubtotal(item: CartItem): number {
-    if (item.product) {
-      return item.product.price * item.quantity;
-    }
-    return 0;
-  }
-
-  /**
-   * Calculate total cart amount
-   */
-  calculateTotal(): number {
-    return this.cartItems.reduce((total, item) => {
-      return total + this.getSubtotal(item);
-    }, 0);
-  }
-
-  /**
    * Proceed to checkout
    */
   checkout(): void {
-    if (this.cartItems.length === 0) {
+    if (this.cartService.getCurrentCartItems().length === 0) {
       this.errorMessage = 'Cart is empty. Please add items before checkout.';
       return;
     }
@@ -204,17 +170,28 @@ export class CartComponent implements OnInit {
   /**
    * Increment quantity
    */
-  incrementQuantity(item: CartItem): void {
+  incrementQuantity(item: ServiceCartItem): void {
     this.updateQuantity(item.productId, item.quantity + 1);
   }
 
   /**
    * Decrement quantity
    */
-  decrementQuantity(item: CartItem): void {
+  decrementQuantity(item: ServiceCartItem): void {
     if (item.quantity > 1) {
       this.updateQuantity(item.productId, item.quantity - 1);
     }
+  }
+
+  getSubtotal(item: ServiceCartItem): number {
+    if (item.product) {
+      return item.product.price * item.quantity;
+    }
+    return 0;
+  }
+
+  calculateTotal(items: ServiceCartItem[]): number {
+    return items.reduce((total, item) => total + this.getSubtotal(item), 0);
   }
 
   /**

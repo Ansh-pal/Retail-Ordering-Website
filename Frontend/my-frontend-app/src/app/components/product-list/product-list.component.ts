@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ProductService, Product, CreateProductRequest } from '../../services/product.service';
 import { CartService } from '../../services/cart.service';
 import { CategoryService, Category } from '../../services/category.service';
+import { BehaviorSubject, Observable, catchError, debounceTime, distinctUntilChanged, of, shareReplay, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'app-product-list',
@@ -13,7 +14,6 @@ import { CategoryService, Category } from '../../services/category.service';
   styleUrls: ['./product-list.component.css']
 })
 export class ProductListComponent implements OnInit {
-  products: Product[] = [];
   categories: Category[] = [];
   isLoading: boolean = true;
   successMessage: string = '';
@@ -22,6 +22,8 @@ export class ProductListComponent implements OnInit {
   selectedCategoryId: string = '';
   productForm!: FormGroup;
   categoryForm!: FormGroup;
+  products$!: Observable<Product[]>;
+  private readonly categoryFilter$ = new BehaviorSubject<string>('');
 
   constructor(
     private productService: ProductService,
@@ -33,8 +35,9 @@ export class ProductListComponent implements OnInit {
   ngOnInit(): void {
     this.getUserRole();
     this.initializeForms();
+    this.initializeProductsStream();
     this.loadCategories();
-    this.loadProducts();
+    this.refreshProducts();
   }
 
   /**
@@ -69,57 +72,69 @@ export class ProductListComponent implements OnInit {
     });
   }
 
-  /**
-   * Load all products from service
-   */
-  private loadProducts(): void {
-    this.isLoading = true;
-    this.productService.getAllProducts().subscribe({
-      next: (response: Product[]) => {
-        this.products = response;
+  private initializeProductsStream(): void {
+    // Debounce quick filter changes and cancel previous request with switchMap.
+    this.products$ = this.categoryFilter$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      tap(() => {
+        this.isLoading = true;
+      }),
+      switchMap((categoryId) => {
+        const request$ = categoryId
+          ? this.productService.getProductsByCategory(Number(categoryId))
+          : this.productService.getAllProducts();
+
+        return request$.pipe(
+          catchError((error) => {
+            this.errorMessage = this.mapHttpError(error, 'Failed to load products.');
+            return of([] as Product[]);
+          })
+        );
+      }),
+      tap(() => {
         this.isLoading = false;
-      },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = this.mapHttpError(error, 'Failed to load products.');
-        console.error('Error loading products:', error);
-      }
-    });
+      }),
+      // Share one API response for all template bindings.
+      shareReplay(1)
+    );
   }
 
-  filterByCategory(): void {
-    if (!this.selectedCategoryId) {
-      this.loadProducts();
-      return;
-    }
-
-    this.isLoading = true;
-    const categoryId = Number(this.selectedCategoryId);
-    this.productService.getProductsByCategory(categoryId).subscribe({
-      next: (response: Product[]) => {
-        this.products = response;
-        this.isLoading = false;
-      },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = this.mapHttpError(error, 'Failed to filter products by category.');
-      }
-    });
+  private refreshProducts(): void {
+    this.categoryFilter$.next(this.selectedCategoryId);
   }
 
   onCategoryFilterChange(value: string): void {
     this.selectedCategoryId = value;
-    this.filterByCategory();
+    this.refreshProducts();
   }
 
   /**
    * Add product to cart
    */
-  addToCart(productId: number): void {
+  addToCart(product: Product): void {
     if (this.isManager()) {
       this.errorMessage = 'Only users can add items to cart.';
       return;
     }
+
+    // Prevent avoidable 400 calls when item is not available in stock.
+    if (!product.isAvailable || product.quantity <= 0) {
+      this.errorMessage = 'This product is currently out of stock.';
+      return;
+    }
+
+    const productId = product.id;
+
+    // Validate before API call to prevent 400 from invalid payload.
+    if (productId == null || !Number.isFinite(productId) || productId <= 0) {
+      this.errorMessage = 'Invalid product selected. Please refresh and try again.';
+      console.error('Invalid addToCart productId:', productId);
+      return;
+    }
+
+    // Debug log helps verify exact values sent to backend.
+    console.log('AddToCart request payload:', { productId, quantity: 1 });
 
     this.clearMessages();
     this.cartService.addToCart(productId, 1).subscribe({
@@ -128,8 +143,19 @@ export class ProductListComponent implements OnInit {
         setTimeout(() => this.clearMessages(), 3000);
       },
       error: (error) => {
-        this.errorMessage = this.mapHttpError(error, 'Failed to add product to cart.');
-        console.error('Error adding to cart:', error);
+        const backendMessage = this.extractBackendErrorMessage(error);
+
+        if (backendMessage.toLowerCase().includes('exceeds available stock')) {
+          this.errorMessage = 'Requested quantity exceeds available stock.';
+        } else if (backendMessage) {
+          this.errorMessage = backendMessage;
+        } else {
+          this.errorMessage = this.mapHttpError(error, 'Failed to add product to cart.');
+        }
+
+        // Log complete backend response for easier debugging.
+        console.error('Error adding to cart (full response):', error);
+        console.error('Backend specific error detail:', error?.error);
         setTimeout(() => this.clearMessages(), 3000);
       }
     });
@@ -183,7 +209,7 @@ export class ProductListComponent implements OnInit {
       next: () => {
         this.successMessage = 'Product added successfully!';
         this.productForm.reset({ isAvailable: true, price: 0, quantity: 1, categoryId: '' });
-        this.loadProducts();
+        this.refreshProducts();
       },
       error: (error) => {
         this.errorMessage = this.mapHttpError(error, 'Failed to add product.');
@@ -210,9 +236,8 @@ export class ProductListComponent implements OnInit {
     this.clearMessages();
     this.productService.deleteProduct(productId).subscribe({
       next: () => {
-        // Remove product from array
-        this.products = this.products.filter(p => p.id !== productId);
         this.successMessage = 'Product deleted successfully!';
+        this.refreshProducts();
         setTimeout(() => this.clearMessages(), 3000);
       },
       error: (error) => {
@@ -238,10 +263,41 @@ export class ProductListComponent implements OnInit {
     this.errorMessage = '';
   }
 
+  private extractBackendErrorMessage(error: any): string {
+    const backendError = error?.error;
+
+    if (typeof backendError === 'string') {
+      return backendError;
+    }
+
+    if (backendError && typeof backendError === 'object') {
+      if (typeof backendError.message === 'string' && backendError.message.trim()) {
+        return backendError.message;
+      }
+
+      if (typeof backendError.title === 'string' && backendError.title.trim()) {
+        return backendError.title;
+      }
+
+      // ASP.NET validation responses often include an errors dictionary.
+      if (backendError.errors && typeof backendError.errors === 'object') {
+        const firstError = Object.values(backendError.errors)
+          .flat()
+          .find((value) => typeof value === 'string');
+
+        if (typeof firstError === 'string') {
+          return firstError;
+        }
+      }
+    }
+
+    return '';
+  }
+
   private mapHttpError(error: any, fallback: string): string {
     switch (error?.status) {
       case 400:
-        return error.error?.message || 'Invalid request payload.';
+        return error.error?.message || error.error?.title || 'Invalid request payload.';
       case 401:
         return 'You are not authenticated. Please login again.';
       case 403:

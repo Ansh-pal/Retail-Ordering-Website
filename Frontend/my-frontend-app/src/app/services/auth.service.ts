@@ -67,8 +67,7 @@ export class AuthService {
   }
 
   getToken(): string {
-    // localStorage exists only in browser runtime; SSR must return a safe fallback.
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    if (!this.canUseStorage()) {
       return '';
     }
 
@@ -79,22 +78,42 @@ export class AuthService {
     localStorage.setItem('authToken', token);
   }
 
-  isAuthenticated(): boolean {
-    // This stays SSR-safe because getToken() already guards browser-only APIs.
-    return !!this.getToken();
-  }
+  getRole(): string {
+    if (!this.canUseStorage()) {
+      return '';
+    }
 
-  getUserRole(): string {
     return localStorage.getItem('userRole') || '';
   }
 
+  // Backward-compatible alias used by older components.
+  getUserRole(): string {
+    return this.getRole();
+  }
+
   getUserName(): string {
+    if (!this.canUseStorage()) {
+      return '';
+    }
+
     return localStorage.getItem('userName') || '';
   }
 
+  isLoggedIn(): boolean {
+    return !!this.getToken();
+  }
+
+  // Backward-compatible alias used by older guard code.
+  isAuthenticated(): boolean {
+    return this.isLoggedIn();
+  }
+
   hasRole(allowedRoles: string[]): boolean {
-    const currentRole = this.getUserRole();
-    return allowedRoles.includes(currentRole);
+    return allowedRoles.includes(this.getRole());
+  }
+
+  private canUseStorage(): boolean {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   }
 
   private parseJwtPayload(token: string): Record<string, unknown> | null {

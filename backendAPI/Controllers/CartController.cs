@@ -20,62 +20,83 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("add")]
-    public async Task<IActionResult> AddToCart(AddCartItemRequest request)
+    public async Task<IActionResult> AddToCart([FromBody] AddToCartDto dto)
     {
-        if (request.ProductId <= 0 || request.Quantity <= 0)
+        Console.WriteLine($"ProductId: {dto?.ProductId}, Quantity: {dto?.Quantity}");
+
+        if (dto is null)
         {
-            return BadRequest("ProductId and Quantity must be greater than zero.");
+            return BadRequest("Invalid request body");
         }
 
-        var userId = GetCurrentUserId();
+        if (dto.ProductId <= 0)
+        {
+            return BadRequest("Invalid product id");
+        }
+
+        if (dto.Quantity <= 0)
+        {
+            return BadRequest("Invalid quantity");
+        }
+
+        var userId = GetCurrentUserIdFromToken();
         if (userId is null)
         {
-            return Unauthorized();
+            return BadRequest("User not found in token");
+        }
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == dto.ProductId);
+        if (product is null)
+        {
+            return BadRequest("Product not found");
+        }
+
+        if (!product.IsAvailable)
+        {
+            return BadRequest("Product is not available");
         }
 
         var cart = await _context.Carts
             .Include(c => c.CartItems)
             .FirstOrDefaultAsync(c => c.UserId == userId.Value);
 
+        var cartCreated = false;
         if (cart is null)
         {
-            return NotFound("Cart not found for this user.");
+            cart = new Cart { UserId = userId.Value };
+            _context.Carts.Add(cart);
+            cartCreated = true;
         }
 
-        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == request.ProductId);
-        if (product is null)
-        {
-            return NotFound("Product not found.");
-        }
-
-        if (!product.IsAvailable)
-        {
-            return BadRequest("Product is not available.");
-        }
-
-        var existingItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == request.ProductId);
-        var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + request.Quantity;
+        var existingItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == dto.ProductId);
+        var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
 
         if (product.Quantity < requestedTotalQuantity)
         {
-            return BadRequest("Requested quantity exceeds available stock.");
+            return BadRequest("Requested quantity exceeds available stock");
         }
 
         if (existingItem is null)
         {
             cart.CartItems.Add(new CartItem
             {
-                ProductId = request.ProductId,
-                Quantity = request.Quantity
+                ProductId = dto.ProductId,
+                Quantity = dto.Quantity
             });
         }
         else
         {
-            existingItem.Quantity += request.Quantity;
+            existingItem.Quantity += dto.Quantity;
         }
 
         await _context.SaveChangesAsync();
-        return Ok(new { message = "Item added to cart." });
+
+        if (cartCreated)
+        {
+            return Ok(new { message = "Cart created successfully" });
+        }
+
+        return Ok(new { message = "Item added to cart" });
     }
 
     [HttpPut("update/{productId:int}")]
@@ -197,19 +218,30 @@ public class CartController : ControllerBase
         return Ok(response);
     }
 
-    private int? GetCurrentUserId()
+    private int? GetCurrentUserIdFromToken()
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (int.TryParse(userIdClaim, out var userId))
+        var userId = User.FindFirst("id")?.Value;
+        if (int.TryParse(userId, out var parsedUserId))
         {
-            return userId;
+            return parsedUserId;
+        }
+
+        var nameIdentifier = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (int.TryParse(nameIdentifier, out parsedUserId))
+        {
+            return parsedUserId;
         }
 
         return null;
     }
+
+    private int? GetCurrentUserId()
+    {
+        return GetCurrentUserIdFromToken();
+    }
 }
 
-public class AddCartItemRequest
+public class AddToCartDto
 {
     public int ProductId { get; set; }
     public int Quantity { get; set; }
