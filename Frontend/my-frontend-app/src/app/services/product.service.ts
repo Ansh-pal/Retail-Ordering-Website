@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface Product {
   id: number;
@@ -15,15 +17,18 @@ export interface Product {
   providedIn: 'root'
 })
 export class ProductService {
-  private baseUrl = 'http://localhost:5000/api/product';
+  private baseUrl = `${environment.apiUrl}/product`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   /**
    * Get authorization headers with Bearer token from localStorage
    */
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
+    const token = this.authService.getToken();
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

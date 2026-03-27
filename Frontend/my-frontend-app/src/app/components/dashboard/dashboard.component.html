@@ -3,13 +3,23 @@
   <header class="navbar">
     <div class="navbar-left">
       <h1 class="logo">Retail Store</h1>
+      <p class="guest-banner" *ngIf="!isAuthenticated">Browsing as Guest</p>
     </div>
     <div class="navbar-right">
-      <div class="user-info">
-        <span class="user-name">{{ userName }}</span>
-        <span class="user-role">({{ userRole }})</span>
-      </div>
-      <button class="btn btn-logout" (click)="logout()">Logout</button>
+      <ng-container *ngIf="isAuthenticated; else guestActions">
+        <div class="user-info">
+          <span class="user-name">Hi, {{ userName }}</span>
+          <span class="user-role">({{ userRole }})</span>
+        </div>
+        <button class="btn btn-logout" (click)="logout()">Logout</button>
+      </ng-container>
+      <ng-template #guestActions>
+        <div class="guest-actions">
+          <span class="guest-message">Login to manage your cart</span>
+          <button class="btn btn-login" (click)="goToLogin()">Login</button>
+          <button class="btn btn-register" (click)="goToRegister()">Register</button>
+        </div>
+      </ng-template>
     </div>
   </header>
 
@@ -26,9 +36,15 @@
             </button>
           </li>
           <li>
-            <button class="menu-item" [class.active]="!showProductList" (click)="showCart()">
+            <button
+              class="menu-item"
+              [class.active]="!showProductList"
+              [disabled]="!isAuthenticated"
+              (click)="showCart()"
+            >
               <span class="menu-icon">🛒</span>
               <span class="menu-text">Shopping Cart</span>
+              <small class="menu-hint" *ngIf="!isAuthenticated">Login required</small>
             </button>
           </li>
         </ul>
@@ -37,6 +53,7 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
+      <div *ngIf="authWarning" class="auth-warning">{{ authWarning }}</div>
       <!-- Product List Component -->
       <div *ngIf="showProductList" class="content-section">
         <app-product-list></app-product-list>
@@ -44,7 +61,15 @@
 
       <!-- Cart Component -->
       <div *ngIf="!showProductList" class="content-section">
-        <app-cart></app-cart>
+        <ng-container *ngIf="isAuthenticated; else loginForCart">
+          <app-cart></app-cart>
+        </ng-container>
+        <ng-template #loginForCart>
+          <div class="cart-locked-message">
+            <p>Your cart is protected. Please log in to view or manage items.</p>
+            <button class="btn btn-login" (click)="goToLogin()">Login</button>
+          </div>
+        </ng-template>
       </div>
     </main>
   </div>

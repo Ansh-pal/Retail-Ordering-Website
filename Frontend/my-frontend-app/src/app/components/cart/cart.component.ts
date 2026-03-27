@@ -89,6 +89,10 @@ export class CartComponent implements OnInit {
         setTimeout(() => this.clearMessages(), 2000);
       },
       error: (error) => {
+        if (error.status === 401) {
+          this.handleUnauthorized();
+          return;
+        }
         this.errorMessage = 'Failed to update quantity. Please try again.';
         console.error('Error updating quantity:', error);
         setTimeout(() => this.clearMessages(), 2000);
@@ -109,6 +113,10 @@ export class CartComponent implements OnInit {
         setTimeout(() => this.clearMessages(), 2000);
       },
       error: (error) => {
+        if (error.status === 401) {
+          this.handleUnauthorized();
+          return;
+        }
         this.errorMessage = 'Failed to remove item. Please try again.';
         console.error('Error removing item:', error);
         setTimeout(() => this.clearMessages(), 2000);
@@ -175,5 +183,11 @@ export class CartComponent implements OnInit {
   private clearMessages(): void {
     this.successMessage = '';
     this.errorMessage = '';
+  }
+
+  private handleUnauthorized(): void {
+    this.errorMessage = 'Your session expired. Please login again to manage the cart.';
+    setTimeout(() => this.clearMessages(), 3000);
+    this.router.navigate(['/login']);
   }
 }

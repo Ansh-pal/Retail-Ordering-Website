@@ -16,6 +16,8 @@ export class DashboardComponent implements OnInit {
   userRole: string = '';
   showProductList: boolean = true;
   userName: string = '';
+  isAuthenticated: boolean = false;
+  authWarning: string = '';
 
   constructor(
     private authService: AuthService,
@@ -23,15 +25,7 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Check if user is authenticated
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    // Get user role from localStorage
-    this.userRole = localStorage.getItem('userRole') || 'User';
-    this.userName = localStorage.getItem('userName') || 'User';
+    this.syncAuthState();
   }
 
   /**
@@ -39,7 +33,19 @@ export class DashboardComponent implements OnInit {
    */
   logout(): void {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    this.syncAuthState();
+    this.showProducts();
+  }
+
+  private syncAuthState(): void {
+    this.isAuthenticated = this.authService.isAuthenticated();
+    if (this.isAuthenticated) {
+      this.userRole = this.authService.getUserRole() || 'User';
+      this.userName = this.authService.getUserName() || 'User';
+    } else {
+      this.userRole = 'Guest';
+      this.userName = 'Guest';
+    }
   }
 
   /**
@@ -47,12 +53,27 @@ export class DashboardComponent implements OnInit {
    */
   showProducts(): void {
     this.showProductList = true;
+    this.authWarning = '';
   }
 
   /**
    * Show cart view
    */
   showCart(): void {
+    if (!this.isAuthenticated) {
+      this.authWarning = 'Please login to view and manage your cart.';
+      this.router.navigate(['/login']);
+      setTimeout(() => (this.authWarning = ''), 4000);
+      return;
+    }
     this.showProductList = false;
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
+  goToRegister(): void {
+    this.router.navigate(['/register']);
   }
 }

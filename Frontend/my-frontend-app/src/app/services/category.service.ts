@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface Category {
   id: number;
@@ -13,15 +15,18 @@ export interface Category {
   providedIn: 'root'
 })
 export class CategoryService {
-  private baseUrl = 'http://localhost:5000/api/category';
+  private baseUrl = `${environment.apiUrl}/category`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   /**
    * Extract token from localStorage and create Authorization Bearer header
    */
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
+    const token = this.authService.getToken();
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

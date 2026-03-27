@@ -58,7 +58,14 @@ export class LoginComponent implements OnInit {
       next: (response: AuthResponse) => {
         // Store token and role
         this.authService.setToken(response.token);
-        localStorage.setItem('userRole', response.userRole);
+        this.authService.setUserRole(response.userRole);
+        const displayName =
+          response.user?.name ||
+          response.user?.fullName ||
+          response.user?.username ||
+          response.user?.email ||
+          this.loginForm.value.email;
+        this.authService.setUserName(displayName);
 
         // Navigate to dashboard
         this.router.navigate(['/dashboard']);

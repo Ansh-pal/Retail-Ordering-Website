@@ -1,12 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, FormGroup, Validators } from '@angular/forms';
 import { ProductService, Product } from '../../services/product.service';
 import { CartService } from '../../services/cart.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.css']
 })
@@ -16,22 +19,40 @@ export class ProductListComponent implements OnInit {
   successMessage: string = '';
   errorMessage: string = '';
   userRole: string = '';
+  isAuthenticated: boolean = false;
+  showAddModal: boolean = false;
+  productForm!: FormGroup;
 
   constructor(
     private productService: ProductService,
-    private cartService: CartService
+    private cartService: CartService,
+    private authService: AuthService,
+    private router: Router,
+    private formBuilder: FormBuilder
   ) {}
 
   ngOnInit(): void {
-    this.getUserRole();
+    this.syncAuthState();
     this.loadProducts();
+    this.initProductForm();
+  }
+
+  private initProductForm(): void {
+    this.productForm = this.formBuilder.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      price: [0, [Validators.required, Validators.min(0)]],
+      quantity: [0, [Validators.required, Validators.min(0)]],
+      categoryName: ['', Validators.required],
+      isAvailable: [true, Validators.required]
+    });
   }
 
   /**
    * Get user role from localStorage
    */
-  private getUserRole(): void {
-    this.userRole = localStorage.getItem('userRole') || '';
+  private syncAuthState(): void {
+    this.isAuthenticated = this.authService.isAuthenticated();
+    this.userRole = this.authService.getUserRole() || 'Guest';
   }
 
   /**
@@ -56,6 +77,10 @@ export class ProductListComponent implements OnInit {
    * Add product to cart
    */
   addToCart(productId: number): void {
+    if (!this.isAuthenticated) {
+      this.promptLoginRedirect();
+      return;
+    }
     this.clearMessages();
     this.cartService.addToCart(productId, 1).subscribe({
       next: (response) => {
@@ -63,6 +88,10 @@ export class ProductListComponent implements OnInit {
         setTimeout(() => this.clearMessages(), 3000);
       },
       error: (error) => {
+        if (error.status === 401) {
+          this.promptLoginRedirect();
+          return;
+        }
         this.errorMessage = 'Failed to add product to cart. Please try again.';
         console.error('Error adding to cart:', error);
         setTimeout(() => this.clearMessages(), 3000);
@@ -106,7 +135,7 @@ export class ProductListComponent implements OnInit {
    * Check if user is Manager
    */
   isManager(): boolean {
-    return this.userRole === 'Manager';
+    return this.userRole?.trim().toLowerCase() === 'manager';
   }
 
   /**
@@ -115,5 +144,55 @@ export class ProductListComponent implements OnInit {
   private clearMessages(): void {
     this.successMessage = '';
     this.errorMessage = '';
+  }
+
+  private promptLoginRedirect(): void {
+    this.errorMessage = 'Please login to add items to your cart.';
+    setTimeout(() => this.clearMessages(), 3000);
+    this.router.navigate(['/login']);
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
+  openAddProductModal(): void {
+    this.productForm.reset({
+      name: '',
+      price: 0,
+      quantity: 0,
+      categoryName: '',
+      isAvailable: true
+    });
+    this.showAddModal = true;
+  }
+
+  closeAddProductModal(): void {
+    this.showAddModal = false;
+  }
+
+  submitProduct(): void {
+    if (this.productForm.invalid) {
+      return;
+    }
+
+    const payload = {
+      ...this.productForm.value,
+      isAvailable: !!this.productForm.value.isAvailable
+    };
+
+    this.productService.addProduct(payload).subscribe({
+      next: (createdProduct: Product) => {
+        this.products = [createdProduct, ...this.products];
+        this.successMessage = 'Product added successfully!';
+        this.closeAddProductModal();
+        setTimeout(() => this.clearMessages(), 3000);
+      },
+      error: (error) => {
+        this.errorMessage = 'Failed to add product. Please try again.';
+        console.error('Error adding product:', error);
+        setTimeout(() => this.clearMessages(), 3000);
+      }
+    });
   }
 }

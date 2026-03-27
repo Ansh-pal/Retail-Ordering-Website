@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import {
   HttpInterceptor,
   HttpRequest,
@@ -9,21 +9,30 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
+import { AuthService } from '../services/auth.service';
+import { environment } from '../../environments/environment';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private router: Router) {}
+  private readonly apiOrigin = new URL(environment.apiUrl).origin;
+  private readonly isBrowser: boolean;
+
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   intercept(
     request: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
-    // Get token from localStorage
-    const token = localStorage.getItem('authToken');
+    const token = this.authService.getToken();
 
-    // Check if URL is same origin (CORS handling)
-    if (token && this.isSameOrigin(request.url)) {
-      // Clone request and add Authorization header with Bearer token
+    if (token && (this.isSameOrigin(request.url) || this.isApiRequest(request.url))) {
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
@@ -36,12 +45,10 @@ export class AuthInterceptor implements HttpInterceptor {
       catchError((error: HttpErrorResponse) => {
         // Handle 401 Unauthorized response
         if (error.status === 401) {
-          // Clear localStorage
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userRole');
-
-          // Navigate to login page
-          this.router.navigate(['/login']);
+          this.authService.logout();
+          if (this.isBrowser) {
+            this.router.navigate(['/login']);
+          }
         }
 
         // Return error
@@ -54,6 +61,9 @@ export class AuthInterceptor implements HttpInterceptor {
    * Check if URL is same origin to handle CORS
    */
   private isSameOrigin(url: string): boolean {
+    if (!this.isBrowser) {
+      return false;
+    }
     // If URL is relative, it's same origin
     if (!url.startsWith('http')) {
       return true;
@@ -62,5 +72,14 @@ export class AuthInterceptor implements HttpInterceptor {
     // Check if URL starts with current origin
     const currentOrigin = window.location.origin;
     return url.startsWith(currentOrigin);
+  }
+
+  private isApiRequest(url: string): boolean {
+    try {
+      const target = new URL(url);
+      return target.origin === this.apiOrigin;
+    } catch {
+      return false;
+    }
   }
 }

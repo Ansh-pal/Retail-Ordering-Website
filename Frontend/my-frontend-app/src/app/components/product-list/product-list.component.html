@@ -1,6 +1,13 @@
 <div class="product-list-container">
   <div class="header">
     <h2>Products</h2>
+    <button
+      *ngIf="isAuthenticated && isManager()"
+      class="btn btn-primary"
+      (click)="openAddProductModal()"
+    >
+      + Add Product
+    </button>
   </div>
 
   <!-- Success Message -->
@@ -44,16 +51,28 @@
             <span *ngIf="!product['isAvailable']" class="badge badge-danger">Out of Stock</span>
           </td>
           <td class="actions">
-            <button
-              class="btn btn-add-cart"
-              (click)="addToCart(product.id)"
-              [disabled]="!product['isAvailable']"
-            >
-              Add to Cart
-            </button>
-            <button *ngIf="isManager()" class="btn btn-delete" (click)="deleteProduct(product.id)">
-              Delete
-            </button>
+            <ng-container *ngIf="isAuthenticated; else loginPrompt">
+              <button
+                class="btn btn-add-cart"
+                (click)="addToCart(product.id)"
+                [disabled]="!product['isAvailable']"
+              >
+                Add to Cart
+              </button>
+              <button
+                *ngIf="isManager()"
+                class="btn btn-delete"
+                (click)="deleteProduct(product.id)"
+              >
+                Delete
+              </button>
+            </ng-container>
+            <ng-template #loginPrompt>
+              <div class="login-required">
+                <p>Login to add items</p>
+                <button class="btn btn-login" (click)="goToLogin()">Login</button>
+              </div>
+            </ng-template>
           </td>
         </tr>
       </tbody>
@@ -63,5 +82,46 @@
   <!-- No Products Message -->
   <div *ngIf="!isLoading && products.length === 0" class="no-products-message">
     <p>No products found</p>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal" [class.show]="showAddModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New Product</h3>
+      <button class="close-btn" (click)="closeAddProductModal()">×</button>
+    </div>
+    <form [formGroup]="productForm" (ngSubmit)="submitProduct()">
+      <div class="form-group">
+        <label>Name</label>
+        <input formControlName="name" placeholder="Product name" />
+      </div>
+      <div class="form-group">
+        <label>Price</label>
+        <input type="number" formControlName="price" placeholder="Price" />
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" formControlName="quantity" placeholder="Quantity" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input formControlName="categoryName" placeholder="Category" />
+      </div>
+      <div class="form-group">
+        <label>Available</label>
+        <select formControlName="isAvailable">
+          <option [ngValue]="true">Yes</option>
+          <option [ngValue]="false">No</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeAddProductModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="productForm.invalid">Save</button>
+      </div>
+    </form>
   </div>
 </div>

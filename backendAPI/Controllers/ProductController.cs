@@ -18,7 +18,6 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "User,Manager")]
     public async Task<IActionResult> GetAllProducts()
     {
         var products = await _context.Products
@@ -38,7 +37,6 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("category/{categoryId:int}")]
-    [Authorize(Roles = "User,Manager")]
     public async Task<IActionResult> GetProductsByCategory(int categoryId)
     {
         if (categoryId <= 0)

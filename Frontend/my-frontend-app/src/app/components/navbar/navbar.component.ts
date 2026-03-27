@@ -66,6 +66,15 @@ export class NavbarComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
+  goToCart(): void {
+    this.closeMobileMenu();
+    if (this.isAuthenticated) {
+      this.router.navigate(['/cart']);
+      return;
+    }
+    this.router.navigate(['/login']);
+  }
+
   /**
    * Navigate to home/landing
    */
@@ -96,6 +105,8 @@ export class NavbarComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     this.isAuthenticated = false;
+    this.userName = '';
+    this.userRole = '';
     this.closeMobileMenu();
   }
 }
