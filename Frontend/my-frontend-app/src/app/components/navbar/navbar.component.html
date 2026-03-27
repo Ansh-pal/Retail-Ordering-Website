@@ -1,0 +1,38 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <!-- Logo/Brand -->
+    <div class="navbar-brand">
+      <span class="logo" (click)="goToHome()">🛍️ RetailHub</span>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="navbar-menu" [class.active]="showMobileMenu">
+      <ul class="nav-links">
+        <li><a (click)="goToHome()" class="nav-link">Home</a></li>
+
+        <!-- Authenticated User Links -->
+        <ng-container *ngIf="isAuthenticated">
+          <li><a (click)="goToDashboard()" class="nav-link">Dashboard</a></li>
+          <li class="user-info">
+            <span class="user-name">{{ userName }}</span>
+            <span class="user-role" [class.manager]="userRole === 'Manager'">{{ userRole }}</span>
+          </li>
+          <li><button (click)="logout()" class="btn btn-logout">Logout</button></li>
+        </ng-container>
+
+        <!-- Unauthenticated User Links -->
+        <ng-container *ngIf="!isAuthenticated">
+          <li><button (click)="goToLogin()" class="btn btn-login">Login</button></li>
+          <li><button (click)="goToRegister()" class="btn btn-register">Register</button></li>
+        </ng-container>
+      </ul>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="hamburger" (click)="toggleMobileMenu()" [class.active]="showMobileMenu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</nav>

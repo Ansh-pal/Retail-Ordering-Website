@@ -1,0 +1,109 @@
+<div class="landing-container">
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <p class="hero-pill">Fresh • Fast • Local</p>
+      <h1 class="hero-title">Crave it? <span>We deliver it hot.</span></h1>
+      <p class="hero-subtitle">
+        Discover chef-crafted meals, street-food favorites, and sweet treats from the best kitchens
+        in town.
+      </p>
+      <div class="hero-buttons">
+        <button *ngIf="!isAuthenticated" (click)="goToLogin()" class="btn btn-primary">
+          Order Now
+        </button>
+        <button *ngIf="isAuthenticated" (click)="goToDashboard()" class="btn btn-primary">
+          Resume Order
+        </button>
+        <button *ngIf="!isAuthenticated" (click)="goToRegister()" class="btn btn-secondary">
+          Create Account
+        </button>
+      </div>
+      <ul class="hero-highlights">
+        <li>🚀 25-minute average delivery</li>
+        <li>🥗 Vegetarian & vegan friendly</li>
+        <li>⭐ Rated 4.9 by 20k+ foodies</li>
+      </ul>
+    </div>
+    <div class="hero-image">
+      <div class="food-plate">
+        <span>🍕</span>
+        <span>🍣</span>
+        <span>🥗</span>
+        <span>🍰</span>
+      </div>
+      <div class="steam"></div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features">
+    <h2>Why FoodDash?</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">👨‍🍳</div>
+        <h3>Chef-Made Meals</h3>
+        <p>Handpicked restaurants with authentic recipes prepared fresh for every order.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Lightning Delivery</h3>
+        <p>Smart routing and partner riders ensure piping hot food at your door.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <h3>Live Tracking</h3>
+        <p>Watch your meal leave the kitchen and follow every turn in real time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌿</div>
+        <h3>Curated For You</h3>
+        <p>Personalized recommendations based on your cravings and dietary goals.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories Section -->
+  <section class="categories">
+    <h2>Popular Bites</h2>
+    <div class="categories-grid">
+      <div class="category-card">
+        <div class="category-icon">🍔</div>
+        <h3>Smash Burgers</h3>
+        <p>Loaded, cheesy & grilled to perfection.</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">🍣</div>
+        <h3>Asian Bowls</h3>
+        <p>Sushi, ramen, and wok-fired goodness.</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">🍨</div>
+        <h3>Dessert Bar</h3>
+        <p>Gelato flights, brownies, and cakes.</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">🥗</div>
+        <h3>Fresh & Fit</h3>
+        <p>Wholesome salads and protein-packed bowls.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <h2>Ready to Feast?</h2>
+    <p>Join thousands of hungry night owls getting gourmet meals in minutes.</p>
+    <div class="cta-buttons">
+      <button *ngIf="!isAuthenticated" (click)="goToLogin()" class="btn btn-primary btn-large">
+        Login & Order
+      </button>
+      <button *ngIf="!isAuthenticated" (click)="goToRegister()" class="btn btn-secondary btn-large">
+        Create Free Account
+      </button>
+      <button *ngIf="isAuthenticated" (click)="goToDashboard()" class="btn btn-primary btn-large">
+        View Active Orders
+      </button>
+    </div>
+  </section>
+</div>
