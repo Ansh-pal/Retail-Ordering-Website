@@ -10,6 +10,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
+// Allow local frontend and localhost development origins.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy.WithOrigins(
+                  "http://localhost:4200",
+                  "https://localhost:4200",
+                  "http://localhost:4300",
+                  "https://localhost:4300",
+                  "http://localhost:5173",
+                  "https://localhost:5173",
+                  "http://localhost:5171",
+                  "https://localhost:7036")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Register EF Core DbContext.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -83,6 +102,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

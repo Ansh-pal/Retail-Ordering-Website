@@ -83,6 +83,43 @@
     </div>
   </div>
 
+  <div *ngIf="!isLoading" class="table-responsive" style="margin-top: 12px;">
+    <h3>Order Actions</h3>
+    <button class="btn btn-checkout" (click)="loadOrders()" style="margin-bottom: 8px;">
+      Refresh Orders
+    </button>
+
+    <div style="margin-bottom: 8px;">
+      <input
+        #orderIdInput
+        type="number"
+        min="1"
+        class="quantity-input"
+        placeholder="Order ID"
+        style="max-width: 180px; margin-right: 8px;"
+      />
+      <button class="btn btn-add-cart" (click)="getOrderDetails(orderIdInput.value)">
+        Get Order Details
+      </button>
+      <button class="btn btn-add-cart" (click)="getOrderItems(orderIdInput.value)" style="margin-left: 8px;">
+        Get Order Items
+      </button>
+    </div>
+
+    <div *ngIf="orders.length > 0">
+      <strong>Orders:</strong>
+      <pre>{{ orders | json }}</pre>
+    </div>
+    <div *ngIf="selectedOrder">
+      <strong>Selected Order:</strong>
+      <pre>{{ selectedOrder | json }}</pre>
+    </div>
+    <div *ngIf="selectedOrderItems.length > 0">
+      <strong>Selected Order Items:</strong>
+      <pre>{{ selectedOrderItems | json }}</pre>
+    </div>
+  </div>
+
   <!-- Empty Cart Message -->
   <div *ngIf="!isLoading && cartItems.length === 0" class="empty-cart-message">
     <p>Your cart is empty</p>

@@ -53,6 +53,13 @@ export class DashboardComponent implements OnInit {
    * Show cart view
    */
   showCart(): void {
+    if (this.userRole !== 'User') {
+      return;
+    }
     this.showProductList = false;
+  }
+
+  isUser(): boolean {
+    return this.userRole === 'User';
   }
 }

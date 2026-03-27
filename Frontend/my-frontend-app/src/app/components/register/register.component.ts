@@ -71,9 +71,7 @@ export class RegisterComponent implements OnInit {
       },
       error: (error) => {
         this.isLoading = false;
-        // Handle error
-        this.errorMessage =
-          error.error?.message || 'Registration failed. Please try again.';
+        this.errorMessage = this.mapHttpError(error, 'Registration failed. Please try again.');
         console.error('Registration error:', error);
       }
     });
@@ -103,5 +101,20 @@ export class RegisterComponent implements OnInit {
 
   get phoneNo() {
     return this.registerForm.get('phoneNo');
+  }
+
+  private mapHttpError(error: any, fallback: string): string {
+    switch (error?.status) {
+      case 400:
+        return error.error?.message || 'Invalid registration request.';
+      case 401:
+        return 'You are not authenticated.';
+      case 403:
+        return 'You are not authorized for this action.';
+      case 404:
+        return 'Registration endpoint not found.';
+      default:
+        return error.error?.message || fallback;
+    }
   }
 }

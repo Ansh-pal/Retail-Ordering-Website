@@ -1,41 +1,37 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Category {
   id: number;
   name: string;
-  description?: string;
   [key: string]: any;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class CategoryService {
-  private baseUrl = 'http://localhost:5000/api/category';
+  private readonly baseUrl = `${environment.apiUrl}/category`;
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Extract token from localStorage and create Authorization Bearer header
+   * GET /api/category
    */
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
-    return new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
+  getAllCategories(): Observable<Category[]> {
+    return this.http.get<Category[]>(this.baseUrl);
   }
 
   /**
-   * Get all categories with authorization
+   * POST /api/category (Manager only)
    */
-  getAllCategories(): Observable<Category[]> {
-    const headers = this.getAuthHeaders();
-    return this.http.get<Category[]>(
-      this.baseUrl,
-      { headers }
-    );
+  createCategory(data: CreateCategoryRequest): Observable<Category> {
+    return this.http.post<Category>(this.baseUrl, data);
   }
 }

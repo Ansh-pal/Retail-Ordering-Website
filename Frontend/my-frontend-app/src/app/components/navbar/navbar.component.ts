@@ -1,7 +1,8 @@
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-navbar',
@@ -27,6 +28,10 @@ export class NavbarComponent implements OnInit {
 
   ngOnInit(): void {
     this.checkAuthStatus();
+
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => this.checkAuthStatus());
   }
 
   /**
