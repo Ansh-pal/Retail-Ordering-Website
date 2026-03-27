@@ -3,6 +3,74 @@
     <h2>Products</h2>
   </div>
 
+  <div class="table-responsive" style="margin-bottom: 12px;">
+    <label for="categoryFilter">Filter by Category</label>
+    <select
+      id="categoryFilter"
+      class="quantity-input"
+      (change)="onCategoryFilterChange($any($event.target).value)"
+      style="margin-left: 8px; max-width: 260px;"
+    >
+      <option value="">All Categories</option>
+      <option *ngFor="let category of categories" [value]="category.id">{{ category.name }}</option>
+    </select>
+  </div>
+
+  <div *ngIf="isManager()" class="table-responsive" style="margin-bottom: 12px;">
+    <h3>Add Category</h3>
+    <form [formGroup]="categoryForm" (ngSubmit)="addCategory()">
+      <input
+        type="text"
+        formControlName="name"
+        class="quantity-input"
+        placeholder="Category name"
+        style="margin-right: 8px; max-width: 260px;"
+      />
+      <button type="submit" class="btn btn-add-cart">Add Category</button>
+    </form>
+  </div>
+
+  <div *ngIf="isManager()" class="table-responsive" style="margin-bottom: 12px;">
+    <h3>Add Product</h3>
+    <form [formGroup]="productForm" (ngSubmit)="addProduct()">
+      <input
+        type="text"
+        formControlName="name"
+        class="quantity-input"
+        placeholder="Name"
+        style="margin-right: 8px; margin-bottom: 8px; max-width: 220px;"
+      />
+      <input
+        type="number"
+        formControlName="price"
+        class="quantity-input"
+        placeholder="Price"
+        step="0.01"
+        style="margin-right: 8px; margin-bottom: 8px; max-width: 140px;"
+      />
+      <select
+        formControlName="categoryId"
+        class="quantity-input"
+        style="margin-right: 8px; margin-bottom: 8px; max-width: 220px;"
+      >
+        <option value="">Select category</option>
+        <option *ngFor="let category of categories" [value]="category.id">{{ category.name }}</option>
+      </select>
+      <input
+        type="number"
+        formControlName="quantity"
+        class="quantity-input"
+        placeholder="Quantity"
+        min="1"
+        style="margin-right: 8px; margin-bottom: 8px; max-width: 140px;"
+      />
+      <label style="margin-right: 8px;">
+        <input type="checkbox" formControlName="isAvailable" /> Available
+      </label>
+      <button type="submit" class="btn btn-add-cart">Add Product</button>
+    </form>
+  </div>
+
   <!-- Success Message -->
   <div *ngIf="successMessage" class="success-message">
     {{ successMessage }}
@@ -45,6 +113,7 @@
           </td>
           <td class="actions">
             <button
+              *ngIf="!isManager()"
               class="btn btn-add-cart"
               (click)="addToCart(product.id)"
               [disabled]="!product['isAvailable']"

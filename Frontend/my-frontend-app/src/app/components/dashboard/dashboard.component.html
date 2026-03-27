@@ -25,7 +25,7 @@
               <span class="menu-text">Products</span>
             </button>
           </li>
-          <li>
+          <li *ngIf="isUser()">
             <button class="menu-item" [class.active]="!showProductList" (click)="showCart()">
               <span class="menu-icon">🛒</span>
               <span class="menu-text">Shopping Cart</span>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Cart Component -->
-      <div *ngIf="!showProductList" class="content-section">
+      <div *ngIf="!showProductList && isUser()" class="content-section">
         <app-cart></app-cart>
       </div>
     </main>

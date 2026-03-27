@@ -9,6 +9,7 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -18,12 +19,9 @@ export class AuthInterceptor implements HttpInterceptor {
     request: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
-    // Get token from localStorage
     const token = localStorage.getItem('authToken');
 
-    // Check if URL is same origin (CORS handling)
-    if (token && this.isSameOrigin(request.url)) {
-      // Clone request and add Authorization header with Bearer token
+    if (token && this.isApiRequest(request.url)) {
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
@@ -31,36 +29,25 @@ export class AuthInterceptor implements HttpInterceptor {
       });
     }
 
-    // Pass request through and handle response
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Handle 401 Unauthorized response
-        if (error.status === 401) {
-          // Clear localStorage
+        if (error.status === 401 || error.status === 403) {
           localStorage.removeItem('authToken');
           localStorage.removeItem('userRole');
+          localStorage.removeItem('userName');
 
-          // Navigate to login page
           this.router.navigate(['/login']);
         }
 
-        // Return error
         return throwError(() => error);
       })
     );
   }
 
   /**
-   * Check if URL is same origin to handle CORS
+   * Attach auth only for configured backend API calls.
    */
-  private isSameOrigin(url: string): boolean {
-    // If URL is relative, it's same origin
-    if (!url.startsWith('http')) {
-      return true;
-    }
-
-    // Check if URL starts with current origin
-    const currentOrigin = window.location.origin;
-    return url.startsWith(currentOrigin);
+  private isApiRequest(url: string): boolean {
+    return url.startsWith(environment.apiUrl);
   }
 }

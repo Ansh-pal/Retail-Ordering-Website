@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { ProductService, Product } from '../../services/product.service';
-import { CartService } from '../../services/cart.service';
+import { Product } from '../../services/product.service';
+import { CartService, CartItem as ServiceCartItem } from '../../services/cart.service';
+import { OrderService, OrderSummary, OrderItem } from '../../services/order.service';
 
 export interface CartItem {
   productId: number;
@@ -22,49 +22,48 @@ export class CartComponent implements OnInit {
   isLoading: boolean = true;
   successMessage: string = '';
   errorMessage: string = '';
-  allProducts: Product[] = [];
+  orders: OrderSummary[] = [];
+  selectedOrderId: number | null = null;
+  selectedOrder: OrderSummary | null = null;
+  selectedOrderItems: OrderItem[] = [];
+  userRole: string = '';
 
   constructor(
-    private productService: ProductService,
     private cartService: CartService,
-    private router: Router
+    private orderService: OrderService
   ) {}
 
   ngOnInit(): void {
-    this.loadProductsForCart();
+    this.userRole = localStorage.getItem('userRole') || '';
+    if (this.userRole !== 'User') {
+      this.isLoading = false;
+      this.errorMessage = 'Cart is available only for users.';
+      return;
+    }
+
+    this.loadCart();
+    this.loadOrders();
   }
 
   /**
-   * Load all products and enrich cart items with product details
+   * Load cart using GET /api/cart
    */
-  loadProductsForCart(): void {
+  loadCart(): void {
     this.isLoading = true;
-    this.productService.getAllProducts().subscribe({
-      next: (products: Product[]) => {
-        this.allProducts = products;
-        this.enrichCartItems();
+    this.cartService.getCart().subscribe({
+      next: (items: ServiceCartItem[]) => {
+        this.cartItems = items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          product: item.product as Product | undefined
+        }));
         this.isLoading = false;
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Failed to load product details. Please try again.';
-        console.error('Error loading products:', error);
+        this.errorMessage = this.mapHttpError(error, 'Failed to load cart.');
+        console.error('Error loading cart:', error);
       }
-    });
-  }
-
-  /**
-   * Enrich cart items with product details
-   */
-  private enrichCartItems(): void {
-    // Sample cart items - in real app, this would come from a cart service endpoint
-    // or stored in a service that maintains cart state across navigation
-    this.cartItems = this.cartItems.map(item => {
-      const product = this.allProducts.find(p => p.id === item.productId);
-      return {
-        ...item,
-        product
-      };
     });
   }
 
@@ -80,7 +79,6 @@ export class CartComponent implements OnInit {
     this.clearMessages();
     this.cartService.updateCartItem(productId, newQuantity).subscribe({
       next: () => {
-        // Update local cart items
         const cartItem = this.cartItems.find(item => item.productId === productId);
         if (cartItem) {
           cartItem.quantity = newQuantity;
@@ -89,7 +87,7 @@ export class CartComponent implements OnInit {
         setTimeout(() => this.clearMessages(), 2000);
       },
       error: (error) => {
-        this.errorMessage = 'Failed to update quantity. Please try again.';
+        this.errorMessage = this.mapHttpError(error, 'Failed to update quantity.');
         console.error('Error updating quantity:', error);
         setTimeout(() => this.clearMessages(), 2000);
       }
@@ -103,13 +101,12 @@ export class CartComponent implements OnInit {
     this.clearMessages();
     this.cartService.removeFromCart(productId).subscribe({
       next: () => {
-        // Remove from local cart items
         this.cartItems = this.cartItems.filter(item => item.productId !== productId);
         this.successMessage = 'Item removed from cart!';
         setTimeout(() => this.clearMessages(), 2000);
       },
       error: (error) => {
-        this.errorMessage = 'Failed to remove item. Please try again.';
+        this.errorMessage = this.mapHttpError(error, 'Failed to remove item.');
         console.error('Error removing item:', error);
         setTimeout(() => this.clearMessages(), 2000);
       }
@@ -144,13 +141,64 @@ export class CartComponent implements OnInit {
       return;
     }
 
-    this.successMessage = 'Proceeding with order placement...';
-    console.log('Order details:', this.cartItems);
+    this.clearMessages();
+    this.orderService.placeOrder().subscribe({
+      next: () => {
+        this.successMessage = 'Order placed successfully!';
+        this.loadCart();
+        this.loadOrders();
+      },
+      error: (error) => {
+        this.errorMessage = this.mapHttpError(error, 'Failed to place order.');
+      }
+    });
+  }
 
-    // Navigate to checkout/order page after a delay
-    setTimeout(() => {
-      this.router.navigate(['/order-summary']);
-    }, 1500);
+  loadOrders(): void {
+    this.orderService.getOrders().subscribe({
+      next: (orders: OrderSummary[]) => {
+        this.orders = orders;
+      },
+      error: (error) => {
+        this.errorMessage = this.mapHttpError(error, 'Failed to fetch orders.');
+      }
+    });
+  }
+
+  getOrderDetails(orderIdInput: string): void {
+    const orderId = Number(orderIdInput);
+    if (!orderId) {
+      this.errorMessage = 'Enter a valid order ID.';
+      return;
+    }
+
+    this.selectedOrderId = orderId;
+    this.orderService.getOrderById(orderId).subscribe({
+      next: (order: OrderSummary) => {
+        this.selectedOrder = order;
+      },
+      error: (error) => {
+        this.errorMessage = this.mapHttpError(error, 'Failed to fetch order details.');
+      }
+    });
+  }
+
+  getOrderItems(orderIdInput: string): void {
+    const orderId = Number(orderIdInput);
+    if (!orderId) {
+      this.errorMessage = 'Enter a valid order ID.';
+      return;
+    }
+
+    this.selectedOrderId = orderId;
+    this.orderService.getOrderItems(orderId).subscribe({
+      next: (items: OrderItem[]) => {
+        this.selectedOrderItems = items;
+      },
+      error: (error) => {
+        this.errorMessage = this.mapHttpError(error, 'Failed to fetch order items.');
+      }
+    });
   }
 
   /**
@@ -175,5 +223,20 @@ export class CartComponent implements OnInit {
   private clearMessages(): void {
     this.successMessage = '';
     this.errorMessage = '';
+  }
+
+  private mapHttpError(error: any, fallback: string): string {
+    switch (error?.status) {
+      case 400:
+        return error.error?.message || 'Invalid request payload.';
+      case 401:
+        return 'You are not authenticated. Please login again.';
+      case 403:
+        return 'You are not authorized for this action.';
+      case 404:
+        return 'Requested resource was not found.';
+      default:
+        return error.error?.message || fallback;
+    }
   }
 }

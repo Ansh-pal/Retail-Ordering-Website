@@ -1,62 +1,60 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Product {
   id: number;
   name: string;
-  description?: string;
   price: number;
-  quantity?: number;
+  quantity: number;
+  categoryId?: number;
+  categoryName?: string;
+  isAvailable: boolean;
   [key: string]: any;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  price: number;
+  categoryId: number;
+  quantity: number;
+  isAvailable: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
-  private baseUrl = 'http://localhost:5000/api/product';
+  private readonly baseUrl = `${environment.apiUrl}/product`;
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Get authorization headers with Bearer token from localStorage
-   */
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
-    return new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
-  }
-
-  /**
-   * Get all products
+   * GET /api/product
    */
   getAllProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(this.baseUrl);
   }
 
   /**
-   * Add a new product with authorization
+   * GET /api/product/category/{categoryId}
    */
-  addProduct(data: any): Observable<any> {
-    const headers = this.getAuthHeaders();
-    return this.http.post(
-      this.baseUrl,
-      data,
-      { headers }
-    );
+  getProductsByCategory(categoryId: number): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.baseUrl}/category/${categoryId}`);
   }
 
   /**
-   * Delete a product by ID with authorization
+   * POST /api/product (Manager only)
+   */
+  addProduct(data: CreateProductRequest): Observable<Product> {
+    return this.http.post<Product>(this.baseUrl, data);
+  }
+
+  /**
+   * DELETE /api/product/{id} (Manager only)
    */
   deleteProduct(id: number): Observable<any> {
-    const headers = this.getAuthHeaders();
-    return this.http.delete(
-      `${this.baseUrl}/${id}`,
-      { headers }
-    );
+    return this.http.delete(`${this.baseUrl}/${id}`);
   }
 }

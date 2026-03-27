@@ -56,18 +56,15 @@ export class LoginComponent implements OnInit {
     // Call login service
     this.authService.login(this.loginForm.value).subscribe({
       next: (response: AuthResponse) => {
-        // Store token and role
-        this.authService.setToken(response.token);
-        localStorage.setItem('userRole', response.userRole);
+        this.isLoading = false;
+        this.authService.setSession(response);
 
         // Navigate to dashboard
         this.router.navigate(['/dashboard']);
       },
       error: (error) => {
         this.isLoading = false;
-        // Handle error
-        this.errorMessage =
-          error.error?.message || 'Login failed. Please check your credentials.';
+        this.errorMessage = this.mapHttpError(error, 'Login failed. Please check your credentials.');
         console.error('Login error:', error);
       }
     });
@@ -89,5 +86,20 @@ export class LoginComponent implements OnInit {
 
   get password() {
     return this.loginForm.get('password');
+  }
+
+  private mapHttpError(error: any, fallback: string): string {
+    switch (error?.status) {
+      case 400:
+        return error.error?.message || 'Invalid login request.';
+      case 401:
+        return 'Invalid email or password.';
+      case 403:
+        return 'Access denied for this account.';
+      case 404:
+        return 'Login endpoint not found.';
+      default:
+        return error.error?.message || fallback;
+    }
   }
 }
