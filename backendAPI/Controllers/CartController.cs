@@ -78,6 +78,56 @@ public class CartController : ControllerBase
         return Ok(new { message = "Item added to cart." });
     }
 
+    [HttpPut("update/{productId:int}")]
+    public async Task<IActionResult> UpdateCartItem(int productId, UpdateCartItemRequest request)
+    {
+        if (productId <= 0 || request.Quantity <= 0)
+        {
+            return BadRequest("ProductId and Quantity must be greater than zero.");
+        }
+
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var cart = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId.Value);
+        if (cart is null)
+        {
+            return NotFound("Cart not found for this user.");
+        }
+
+        var cartItem = await _context.CartItems
+            .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
+
+        if (cartItem is null)
+        {
+            return NotFound("Cart item not found.");
+        }
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId);
+        if (product is null)
+        {
+            return NotFound("Product not found.");
+        }
+
+        if (!product.IsAvailable)
+        {
+            return BadRequest("Product is not available.");
+        }
+
+        if (request.Quantity > product.Quantity)
+        {
+            return BadRequest("Requested quantity exceeds available stock.");
+        }
+
+        cartItem.Quantity = request.Quantity;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Cart item updated." });
+    }
+
     [HttpDelete("remove/{productId:int}")]
     public async Task<IActionResult> RemoveFromCart(int productId)
     {
@@ -162,6 +212,11 @@ public class CartController : ControllerBase
 public class AddCartItemRequest
 {
     public int ProductId { get; set; }
+    public int Quantity { get; set; }
+}
+
+public class UpdateCartItemRequest
+{
     public int Quantity { get; set; }
 }
 
