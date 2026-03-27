@@ -1,0 +1,67 @@
+<div class="product-list-container">
+  <div class="header">
+    <h2>Products</h2>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="success-message">
+    {{ successMessage }}
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-message">
+    <p>Loading products...</p>
+  </div>
+
+  <!-- Products Table -->
+  <div *ngIf="!isLoading && products.length > 0" class="table-responsive">
+    <table class="products-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Price</th>
+          <th>Category</th>
+          <th>Quantity</th>
+          <th>Available</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of products" [class.out-of-stock]="!product['isAvailable']">
+          <td>{{ product.id }}</td>
+          <td>{{ product.name }}</td>
+          <td>${{ product.price | number: '1.2-2' }}</td>
+          <td>{{ product['categoryName'] || 'N/A' }}</td>
+          <td>{{ product.quantity }}</td>
+          <td>
+            <span *ngIf="product['isAvailable']" class="badge badge-success">Available</span>
+            <span *ngIf="!product['isAvailable']" class="badge badge-danger">Out of Stock</span>
+          </td>
+          <td class="actions">
+            <button
+              class="btn btn-add-cart"
+              (click)="addToCart(product.id)"
+              [disabled]="!product['isAvailable']"
+            >
+              Add to Cart
+            </button>
+            <button *ngIf="isManager()" class="btn btn-delete" (click)="deleteProduct(product.id)">
+              Delete
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No Products Message -->
+  <div *ngIf="!isLoading && products.length === 0" class="no-products-message">
+    <p>No products found</p>
+  </div>
+</div>
